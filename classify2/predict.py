@@ -18,12 +18,13 @@ GSR_FILE = 'gsr.npy'
 EEG_FILE = 'eeg.npy'
 PUPIL_FILE = 'pupil.data'
 TYPES = 4
+USERS = 28
 
 emotion_map = {0:'neutral', 1:'joyful', 2:'sad', 3:'fearful'}
 emotion_inverse_map = {'ne':0, 'jo':1, 'sa':2, 'fe':3}
 
-fea_map = {}
 pupil_fea = {} #ecg & gsr data: m*8*n, m people in people_map{}, 8 line for 4 emotions
+result = {}
 
 def parse_pupil(): # n * (6 + label)
     print("In parse_pupil()")
@@ -68,7 +69,8 @@ def gen_del(num):
 
 def parse_npy_data(SIGNAL_TYPE):
     print('Parsing %s...'%SIGNAL_TYPE)
-    
+    result[SIGNAL_TYPE] = [[[-1.0,-1.0] for i in range(3)] for j in range(USERS)]
+
     data = numpy.load(DATA_DIR+SIGNAL_TYPE)
 
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
@@ -82,6 +84,8 @@ def parse_npy_data(SIGNAL_TYPE):
     
     # normalization
     for i in range(data.shape[1] - 1):
+        if (numpy.max(numpy.abs(data[:,i]))==0):
+            print(i)
         #data[:,i] = (data[:,i] - numpy.mean(data[:,i])) / numpy.std(data[:,i])
         data[:,i] = (data[:,i] - numpy.min(data[:,i])) / (numpy.max(data[:,i]) - numpy.min(data[:,i]))
         
@@ -94,7 +98,7 @@ def load_features():
     eeg_data = parse_npy_data(EEG_FILE)
     pupil_data = parse_pupil()
     
-    return ecg_data, gsr_data, pupil_data
+    return ecg_data, gsr_data, eeg_data, pupil_data
 
 def predict(train, test, epoch_num, batch_num):
     dims = train.shape
@@ -142,6 +146,7 @@ def predict(train, test, epoch_num, batch_num):
 if __name__ == "__main__":
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
+    print(result)
     exit()
 
     rd_ecg = numpy.random.permutation(ecg.shape[0])
