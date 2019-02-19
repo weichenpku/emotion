@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+#! /usr/bin/python
 # -*-coding:utf-8
 
 import numpy
@@ -12,8 +12,10 @@ from keras.utils import np_utils
 from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
 
-ECG_FILE = 'ecg'
-GSR_FILE = 'gsr'
+DATA_DIR = '../features/'
+ECG_FILE = 'ecg.npy'
+GSR_FILE = 'gsr.npy'
+EEG_FILE = 'eeg.npy'
 PUPIL_FILE = 'pupil.data'
 TYPES = 4
 
@@ -26,7 +28,7 @@ pupil_fea = {} #ecg & gsr data: m*8*n, m people in people_map{}, 8 line for 4 em
 def parse_pupil(): # n * (6 + label)
     print("In parse_pupil()")
     pupil_data = numpy.array([])
-    with open(PUPIL_FILE, 'r') as f:
+    with open(DATA_DIR+PUPIL_FILE, 'r') as f:
         lines = f.readlines()
         cur_emo = None
         emoNum = 0
@@ -66,28 +68,19 @@ def gen_del(num):
 
 def parse_npy_data(SIGNAL_TYPE):
     print('Parsing %s...'%SIGNAL_TYPE)
-    global fea_map
     
-    fea_map[SIGNAL_TYPE] = {}
-    idx = numpy.load(SIGNAL_TYPE + '_file.npy')
-    for i in range(idx.shape[0]):
-        fea_map[SIGNAL_TYPE]['y' + str(idx[i])] = i
-    
-    data = numpy.load(SIGNAL_TYPE + '_feature.npy')
-    for i in range(data.shape[0]): # substract each person's neutral values
-        ne_mean = (data[i][0] + data[i][1]) / 2.0
-        for j in range(data.shape[1]):
-            data[i][j] = data[i][j] - ne_mean
-    
+    data = numpy.load(DATA_DIR+SIGNAL_TYPE)
+
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
             data[i][j][data.shape[2] - 1] = int(j / 2)
     
     data = data.reshape(data.shape[0]*data.shape[1], data.shape[2])
-    del_list = gen_del(data.shape[0])
-    data = numpy.delete(data, del_list, axis=0)
+    #del_list = gen_del(data.shape[0])
+    #data = numpy.delete(data, del_list, axis=0)
     
+    # normalization
     for i in range(data.shape[1] - 1):
         #data[:,i] = (data[:,i] - numpy.mean(data[:,i])) / numpy.std(data[:,i])
         data[:,i] = (data[:,i] - numpy.min(data[:,i])) / (numpy.max(data[:,i]) - numpy.min(data[:,i]))
@@ -98,6 +91,7 @@ def load_features():
     print('In load_features()')
     ecg_data = parse_npy_data(ECG_FILE)
     gsr_data = parse_npy_data(GSR_FILE)
+    eeg_data = parse_npy_data(EEG_FILE)
     pupil_data = parse_pupil()
     
     return ecg_data, gsr_data, pupil_data
@@ -147,7 +141,9 @@ def predict(train, test, epoch_num, batch_num):
 
 if __name__ == "__main__":
     #parse_pupil()
-    ecg, gsr, pupil = load_features()
+    ecg, gsr, eeg, pupil = load_features()
+    exit()
+
     rd_ecg = numpy.random.permutation(ecg.shape[0])
     rd_gsr = numpy.random.permutation(gsr.shape[0])
     rd_pupil = numpy.random.permutation(pupil.shape[0])
