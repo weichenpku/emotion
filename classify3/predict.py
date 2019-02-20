@@ -57,18 +57,6 @@ def parse_pupil(): # n * (6 + label)
     
     return pupil_data
 
-def gen_del(num):
-    res = []
-    a = 0
-    b = 1
-    while b < num:
-        res.append(a)
-        res.append(b)
-        a += 8
-        b += 8
-    
-    return res
-
 def parse_npy_data(SIGNAL_TYPE):
     print('Parsing %s...'%SIGNAL_TYPE)
     result[SIGNAL_TYPE] = [[[-1.0,-1.0] for i in range(3)] for j in range(USERS)]
@@ -85,17 +73,20 @@ def parse_npy_data(SIGNAL_TYPE):
 
     data = numpy.delete(data, del_list, axis=0)
 
+    ne_data = numpy.append(data,data,axis=2)
     for i in range(data.shape[0]): # substract each person's neutral values
-        ne_mean = (data[i][0] + data[i][1]) / 2.0
         for j in range(data.shape[1]):
-            data[i][j] = data[i][j] - ne_mean
+            ne_data[i][j] = numpy.append(data[i][0], data[i][1])
+    print(data.shape)
+    print(ne_data.shape)
+    data = numpy.append(data,ne_data,axis=2)
     
     data = numpy.delete(data, [0,1], axis=1)
 
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
-            data[i][j][data.shape[2] - 1] = int(j / 2)
+            data[i][j][data.shape[2] - 1] = int(j / 2)+1
     
     
 
@@ -135,8 +126,8 @@ def predict(train, test, epoch_num, batch_num):
     
     model = Sequential()
     model.add(Dense(32, input_shape=(dims[1] - 1,), activation='relu'))
-    model.add(Dense(16, activation='relu'))
-    #model.add(Dense(8, activation='relu'))
+    #model.add(Dense(16, activation='relu'))
+    #model.add(Dense(8, activation='relu')) 
     model.add(Dense(3, activation='softmax'))
     # Compile model
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -151,19 +142,23 @@ def predict(train, test, epoch_num, batch_num):
     print(Y1.shape)
     
     result = model.predict_classes(X1)
-    #print(result)
+    result1 = model.predict(X1)
+    print(result)
+    print(result1)
     correct = 0
     for i in range(len(Y1)):
-        print(result[i], ' ', Y1[i])
+        print(result[i]+1, ' ', Y1[i])
         if int(result[i]) == int(Y1[i] - 1):
             correct += 1
     
     print("Correct Results: %d/%d"%(correct, len(X1)))
+    numpy.save('type.npy',Y1)
+    numpy.save('possi.npy',result1)
 
 if __name__ == "__main__":
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
-    print(ecg.shape,gsr.shape,eeg.shape)
+    print(ecg.shape,gsr.shape,eeg.shape,pupil.shape)
 
     rd_ecg = numpy.random.permutation(ecg.shape[0])
     rd_gsr = numpy.random.permutation(gsr.shape[0])
@@ -177,7 +172,7 @@ if __name__ == "__main__":
     
     #predict(ecg[0:130,:], ecg[130:, :], 1000, 5)
     #predict(gsr[0:130,:], gsr[130:, :], 1000, 5)
-    predict(eeg[0:130,:], eeg[130:, :], 200, 5)
+    predict(eeg[0:120,:], eeg[120:, :], 200, 5)
     #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
     #predict()
     exit()
