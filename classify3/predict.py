@@ -11,6 +11,8 @@ from keras.utils import np_utils
 #from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
+import scipy
+import scipy.io as sio
 
 DATA_DIR = '../features/'
 ECG_FILE = 'ecg.npy'
@@ -152,14 +154,16 @@ def predict(train, test, epoch_num, batch_num):
             correct += 1
     
     print("Correct Results: %d/%d"%(correct, len(X1)))
-    numpy.save('type.npy',Y1)
-    numpy.save('possi.npy',result1)
+    
 
 if __name__ == "__main__":
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
     print(ecg.shape,gsr.shape,eeg.shape,pupil.shape)
-
+    
+    sio.savemat('eeg_norm.mat',{'eeg':eeg})
+    exit()
+    '''
     rd_ecg = numpy.random.permutation(ecg.shape[0])
     rd_gsr = numpy.random.permutation(gsr.shape[0])
     rd_eeg = numpy.random.permutation(eeg.shape[0])
@@ -169,7 +173,8 @@ if __name__ == "__main__":
     gsr = gsr[rd_gsr,:]
     eeg = eeg[rd_eeg,:]
     pupil = pupil[rd_pupil,:]
-    
+    '''
+
     #predict(ecg[0:130,:], ecg[130:, :], 1000, 5)
     #predict(gsr[0:130,:], gsr[130:, :], 1000, 5)
     predict(eeg[0:120,:], eeg[120:, :], 200, 5)
