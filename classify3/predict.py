@@ -75,6 +75,7 @@ def parse_npy_data(SIGNAL_TYPE):
 
     data = numpy.delete(data, del_list, axis=0)
 
+    '''
     ne_data = numpy.append(data,data,axis=2)
     for i in range(data.shape[0]): # substract each person's neutral values
         for j in range(data.shape[1]):
@@ -82,8 +83,8 @@ def parse_npy_data(SIGNAL_TYPE):
     print(data.shape)
     print(ne_data.shape)
     data = numpy.append(data,ne_data,axis=2)
-    
     data = numpy.delete(data, [0,1], axis=1)
+    '''
 
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
