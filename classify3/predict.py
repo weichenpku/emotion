@@ -3,8 +3,10 @@
 
 import numpy
 import pandas
+import gc
 from keras.models import Sequential
 from keras.layers import Dense
+from keras import backend
 #from keras.wrappers.scikit_learn import KerasClassifier
 from keras.utils import np_utils
 #from sklearn.model_selection import cross_val_score
@@ -12,6 +14,7 @@ from keras.utils import np_utils
 from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.decomposition import PCA
 import scipy
 import scipy.io as sio
 
@@ -30,6 +33,9 @@ pupil_fea = {} #ecg & gsr data: m*8*n, m people in people_map{}, 8 line for 4 em
 
 result = {} # [confidence1, type1], [confidence2, type2], [confidence3, type3]] of each user
 data_map = {} # channel: index => user
+
+eeg_f1_result = []
+eeg_classify_result = []
 
 def parse_pupil(): # n * (6 + label)
     print("In parse_pupil()")
@@ -76,21 +82,18 @@ def parse_npy_data(SIGNAL_TYPE):
 
     data = numpy.delete(data, del_list, axis=0)
 
-    '''
-    ne_data = numpy.append(data,data,axis=2)
-    for i in range(data.shape[0]): # substract each person's neutral values
-        for j in range(data.shape[1]):
-            ne_data[i][j] = numpy.append(data[i][0], data[i][1])
-    print(data.shape)
-    print(ne_data.shape)
-    data = numpy.append(data,ne_data,axis=2)
-    data = numpy.delete(data, [0,1], axis=1)
-    '''
     for i in range(data.shape[0]): # substract each person's neutral values
         ne_mean = (data[i][0] + data[i][1]) / 2.0
+        #ne_mean = numpy.sqrt(data[i][0] * data[i][1])
         for j in range(data.shape[1]):
             data[i][j] = data[i][j] - ne_mean
-
+            if (SIGNAL_TYPE==EEG_FILE):
+                for k in range(data.shape[2]):
+                    if ne_mean[k]==0:
+                        data[i][j][k] = 1
+                    else:
+                        data[i][j][k] = data[i][j][k]/ne_mean[k]
+            
     data = numpy.delete(data, [0,1], axis=1)
 
 
@@ -100,14 +103,9 @@ def parse_npy_data(SIGNAL_TYPE):
             data[i][j][data.shape[2] - 1] = int(j / 2)+1
     
     
-
-    data = data.reshape(data.shape[0]*data.shape[1], data.shape[2])
+    for i in range(data.shape[2]-1):
+        data[:,:,i] = (data[:,:,i]- numpy.min(data[:,:,i])) / (numpy.max(data[:,:,i]) - numpy.min(data[:,:,i]))
     
-    # normalization
-    for i in range(data.shape[1] - 1):
-        #data[:,i] = (data[:,i] - numpy.mean(data[:,i])) / numpy.std(data[:,i])
-        data[:,i] = (data[:,i] - numpy.min(data[:,i])) / (numpy.max(data[:,i]) - numpy.min(data[:,i]))
-        
     return data
  
 def load_features():
@@ -119,7 +117,7 @@ def load_features():
     
     return ecg_data, gsr_data, eeg_data, pupil_data
 
-def predict(train, test, epoch_num, batch_num):
+def predict(train, test, epoch_num, batch_num, user):
     dims = train.shape
     X = train[:,0:dims[1] - 1].astype(float)
     Y = train[:,dims[1] - 1]
@@ -153,20 +151,42 @@ def predict(train, test, epoch_num, batch_num):
     print(Y1.shape)
     
     result = model.predict_classes(X1)
-    result1 = model.predict(X1)
-    print(result)
-    print(result1)
+    result_p = model.predict(X1)
     correct = 0
     for i in range(len(Y1)):
-        print(result[i]+1, ' ', Y1[i])
+        eeg_classify_result[int(Y1[i] - 1)][int(result[i])] = eeg_classify_result[int(Y1[i] - 1)][int(result[i])] + 1   
+        print(result[i]+1, ' ', Y1[i], ' ',user[int(i/6)], ' ', result_p[i])
         if int(result[i]) == int(Y1[i] - 1):
             correct += 1
+
+    user_valid=[[0,0] for i in range(int(len(Y1)/6))]
+    for i in range(0,len(Y1),6):
+        user_valid[int(i/6)]=([user[int(i/6)],result[i:i+6]==Y1[i:i+6]-1])
     
     print("Correct Results: %d/%d"%(correct, len(X1)))
+    print(user_valid)
+
+    backend.clear_session()
+    return user_valid
     
 def LDA_predict(xtrain,ytrain,xtest,ytest):
-    clf = LinearDiscriminantAnalysis()
+    clf = LinearDiscriminantAnalysis(n_components=2)
     clf.fit(xtrain,ytrain)
+
+    xtrain_new=clf.transform(xtrain)
+    xtest_new=clf.transform(xtest)
+    datatrain = numpy.insert(xtrain_new, 2, int(1), axis=1) # add labels
+    datatest = numpy.insert(xtest_new, 2, int(1), axis=1)
+    
+    for i in range(datatrain.shape[0]):
+        datatrain[i][2]=ytrain[i]
+    for i in range(datatest.shape[0]):
+        datatest[i][2]=ytest[i]    
+
+    print(datatrain)
+    print(datatest)
+    predict(datatrain, datatest, 50, 5)
+    '''
     ypredict=clf.predict(xtest)
     
     correct = 0
@@ -176,32 +196,78 @@ def LDA_predict(xtrain,ytrain,xtest,ytest):
             correct += 1
     
     print("Correct Results: %d/%d"%(correct, len(ytest)))
-
+    '''
 
 if __name__ == "__main__":
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
     print(ecg.shape,gsr.shape,eeg.shape,pupil.shape)
+    eeg_origin=eeg
+    
+    fea_dim = eeg_origin.shape[2]-1
+    shape = eeg_origin.shape
+    pca_origin = eeg_origin[:,:,0:fea_dim].reshape(shape[0]*shape[1],fea_dim)
+    pca = PCA(n_components=64)
+    eeg_new = pca.fit_transform(pca_origin)
+    eeg_pca = numpy.append(eeg_new.reshape(shape[0],shape[1],64),eeg_origin,axis=2)
+    eeg_pca = numpy.delete(eeg_pca,range(64,eeg_pca.shape[2]-1),axis=2)
+    print(eeg_pca.shape)
+    
 
-    
-    rd_ecg = numpy.random.permutation(ecg.shape[0])
-    rd_gsr = numpy.random.permutation(gsr.shape[0])
-    rd_eeg = numpy.random.permutation(eeg.shape[0])
-    rd_pupil = numpy.random.permutation(pupil.shape[0])
-    
-    ecg = ecg[rd_ecg,:]
-    gsr = gsr[rd_gsr,:]
-    eeg = eeg[rd_eeg,:]
-    pupil = pupil[rd_pupil,:]
-    
+    eeg_result=([[] for i in range(28)])
+    eeg_f1_result=[0 for i in range(160)]
+    for i in range(160):
+        featureidx = i-1
+        if featureidx>=0:
+            eeg_data = numpy.delete(eeg_origin, [featureidx], axis=2)
+        else:
+            eeg_data = eeg_origin
 
-    #trainline = 130 #150
-    #featurenum = 159
-    #LDA_predict(eeg[:trainline,:featurenum],eeg[:trainline,featurenum],eeg[trainline:,:featurenum],eeg[trainline:,featurenum])
-    
-    #predict(ecg[0:130,:], ecg[130:, :], 1000, 5)
-    #predict(gsr[0:130,:], gsr[130:, :], 1000, 5)
-    predict(eeg[0:130,:], eeg[130:, :], 400, 5)
+        eeg_classify_result = [[0 for i in range(3)] for i in range(3)]
+        for idx in range(2):
+            eeg=eeg_data
+            rd_ecg = numpy.random.permutation(ecg.shape[0])
+            rd_gsr = numpy.random.permutation(gsr.shape[0])
+            rd_eeg = numpy.random.permutation(eeg.shape[0])
+            rd_pupil = numpy.random.permutation(pupil.shape[0])
+
+            ecg = ecg[rd_ecg,:]
+            gsr = gsr[rd_gsr,:]
+            eeg = eeg[rd_eeg,:]
+            pupil = pupil[rd_pupil,:]
+
+
+            '''
+            fidx=numpy.load('fidx.npy')-1
+            full=range(159)
+            delidx=numpy.delete(full,fidx)
+            eeg=numpy.delete(eeg,delidx,axis=1)
+            print(eeg.shape)
+            '''
+
+        
+            #xtrain,xtest = LDA_predict(eeg[:trainline,:featurenum],eeg[:trainline,featurenum],eeg[trainline:,:featurenum],eeg[trainline:,featurenum])
+            
+
+            #predict(ecg[0:130,:], ecg[130:, :], 1000, 5)
+            #predict(gsr[0:130,:], gsr[130:, :], 1000, 5)
+
+            eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])
+            
+            ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            for i in range(len(ret)):
+                id=ret[i][0]
+                num=ret[i][1]
+                #print(eeg_result[id])
+                print(num)
+                eeg_result[id] = numpy.append(eeg_result[id],num)
+        
+                
+            for i in range(28):
+                print(i,eeg_result[i])
+
+        print(eeg_classify_result)
+
     #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
     #predict()
     exit()
