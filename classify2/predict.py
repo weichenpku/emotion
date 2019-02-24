@@ -155,7 +155,7 @@ def predict(train, test, epoch_num, batch_num):
     correct = 0
     for i in range(len(Y1)):
         print(result[i], ' ', Y1[i])
-        if int(result[i]) == int(Y1[i] - 1):
+        if int(result[i]) == int(Y1[i]):
             correct += 1
     
     print("Correct Results: %d/%d"%(correct, len(X1)))
