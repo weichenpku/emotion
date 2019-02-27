@@ -21,7 +21,7 @@ import scipy.io as sio
 DATA_DIR = '../features/'
 ECG_FILE = 'ecg.npy'
 GSR_FILE = 'gsr.npy'
-EEG_FILE = 'eeg3.npy'
+EEG_FILE = 'eeg2.npy'
 PUPIL_FILE = 'pupil.data'
 TYPES = 4
 USERS = 28
@@ -82,6 +82,20 @@ def parse_npy_data(SIGNAL_TYPE):
 
     data = numpy.delete(data, del_list, axis=0)
 
+    for i in range(data.shape[0]): # substract each person's neutral values
+        ne_mean = (data[i][0] + data[i][1]) / 2.0
+        #ne_mean = numpy.sqrt(data[i][0] * data[i][1])
+        for j in range(data.shape[1]):
+            data[i][j] = data[i][j] - ne_mean
+            if (SIGNAL_TYPE==EEG_FILE):
+                for k in range(data.shape[2]):
+                    if ne_mean[k]==0:
+                        data[i][j][k] = 1
+                    else:
+                        data[i][j][k] = data[i][j][k]/ne_mean[k]
+            
+    data = numpy.delete(data, [0,1], axis=1)
+
 
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
@@ -96,8 +110,8 @@ def parse_npy_data(SIGNAL_TYPE):
  
 def load_features():
     print('In load_features()')
-    ecg_data = numpy.array([])#parse_npy_data(ECG_FILE)
-    gsr_data = numpy.array([])#parse_npy_data(GSR_FILE)
+    ecg_data = parse_npy_data(ECG_FILE)
+    gsr_data = parse_npy_data(GSR_FILE)
     eeg_data = parse_npy_data(EEG_FILE)
     pupil_data = parse_pupil()
     
@@ -187,10 +201,10 @@ def LDA_predict(xtrain,ytrain,xtest,ytest):
 if __name__ == "__main__":
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
-    print(eeg.shape)
+    print(ecg.shape,gsr.shape,eeg.shape,pupil.shape)
     eeg_origin=eeg
     
-    apply_pca = False
+    apply_pca = True
     pca_comp_num = 32
     if apply_pca:
         fea_dim = eeg_origin.shape[2]-1
@@ -199,75 +213,99 @@ if __name__ == "__main__":
         
         pca = PCA(n_components = pca_comp_num)
         eeg_new = pca.fit_transform(pca_origin)
+        
+        #t=pca.get_covariance()
         eeg_pca = numpy.append(eeg_new.reshape(shape[0],shape[1],pca_comp_num),eeg_origin,axis=2)
         eeg_pca = numpy.delete(eeg_pca,range(pca_comp_num,eeg_pca.shape[2]-1),axis=2)
         eeg_origin = eeg_pca
+    
+    feature_able = [0 for i in range(pca_comp_num)]
+    feature_del = numpy.array([])
 
-
+    acc_result1=[0 for i in range(pca_comp_num)]
+    acc_result2=[0 for i in range(pca_comp_num)]
     eeg_result=([[] for i in range(USERS)])
-    eeg_f1_result=[0 for i in range(pca_comp_num+1)]
-    #for feaidx in range(pca_comp_num+1):
-    if (1):
-        feaidx=0 
-        featureidx = feaidx-1
-        if featureidx>=0:
-            eeg_data = numpy.delete(eeg_origin, [featureidx], axis=2)
-        else:
-            eeg_data = eeg_origin
-        '''
-        for i in range(feature_able.shape[0]):
-            if feature_able[feature_able.shape[0]-1-i]==0:
-                eeg_data = numpy.delete(eeg_data, [feature_able.shape[0]-1-i], axis=2)
-        print('feature:',eeg_data.shape)
-        '''
-        eeg_classify_result = [[0 for i in range(3)] for i in range(3)]
-
-        repeat_time = 10
+    eeg_f1_result=[0 for i in range(pca_comp_num)]
+    for feaidx in range(pca_comp_num):
+        
+        tmp_del = numpy.append(feature_del,feaidx)
+        eeg_data1 = numpy.delete(eeg_origin, feature_del, axis=2)
+        eeg_data2 = numpy.delete(eeg_origin, tmp_del, axis=2)
+        
+        print('feature_dims', eeg_data1.shape, eeg_data2.shape)
+        
+        eeg_data = eeg_data1
+        eeg_result=([[] for i in range(USERS)])
+        eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
+        repeat_time = 100
         for idx in range(repeat_time):
+            print('feature id:',feaidx,idx)
             eeg=eeg_data
+            rd_ecg = numpy.random.permutation(ecg.shape[0])
+            rd_gsr = numpy.random.permutation(gsr.shape[0])
             rd_eeg = numpy.random.permutation(eeg.shape[0])
             rd_pupil = numpy.random.permutation(pupil.shape[0])
-            
+
+            ecg = ecg[rd_ecg,:]
+            gsr = gsr[rd_gsr,:]
             eeg = eeg[rd_eeg,:]
             pupil = pupil[rd_pupil,:]
-
-
-            '''
-            fidx=numpy.load('fidx.npy')-1
-            full=range(159)
-            delidx=numpy.delete(full,fidx)
-            eeg=numpy.delete(eeg,delidx,axis=1)
-            print(eeg.shape)
-            '''
-
-        
-            #xtrain,xtest = LDA_predict(eeg[:trainline,:featurenum],eeg[:trainline,featurenum],eeg[trainline:,:featurenum],eeg[trainline:,featurenum])
-            
-
-            #predict(ecg[0:130,:], ecg[130:, :], 1000, 5)
-            #predict(gsr[0:130,:], gsr[130:, :], 1000, 5)
-
-            eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])
-            
+            eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
             ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
-
-            
-
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
                 #print(eeg_result[id])
                 print(num)
                 eeg_result[id] = numpy.append(eeg_result[id],num)
-        
                 
             for i in range(USERS):
                 print(i,eeg_result[i])
+        acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(4*6*repeat_time)
+        acc_result1[feaidx]=acc1
 
-        
-        print(eeg_classify_result)
+        eeg_data = eeg_data2
+        eeg_result=([[] for i in range(USERS)])
+        eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
+        repeat_time = 100
+        for idx in range(repeat_time):
+            eeg=eeg_data
+            rd_ecg = numpy.random.permutation(ecg.shape[0])
+            rd_gsr = numpy.random.permutation(gsr.shape[0])
+            rd_eeg = numpy.random.permutation(eeg.shape[0])
+            rd_pupil = numpy.random.permutation(pupil.shape[0])
+
+            ecg = ecg[rd_ecg,:]
+            gsr = gsr[rd_gsr,:]
+            eeg = eeg[rd_eeg,:]
+            pupil = pupil[rd_pupil,:]
+            eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
+            ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            for i in range(len(ret)):
+                id=ret[i][0]
+                num=ret[i][1]
+                #print(eeg_result[id])
+                print(num)
+                eeg_result[id] = numpy.append(eeg_result[id],num)
+                
+            for i in range(USERS):
+                print(i,eeg_result[i])
+        acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(4*6*repeat_time)
+        acc_result2[feaidx]=acc2
+
+        print('acc',acc1,acc2)
+        if acc1+0.001<acc2:
+            feature_del = tmp_del
+    
+    
+    print(acc_result1)
+    print(acc_result2)
+    print('del_idx',feature_del)
 
     #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
     #predict()
     exit()
     
+    '''
+    [0.535, 0.5379166666666667, 0.5304166666666666, 0.53, 0.5295833333333333, 0.5383333333333333, 0.53375, 0.44416666666666665, 0.5345833333333333, 0.4725, 0.52625, 0.55625, 0.5329166666666667, 0.5154166666666666, 0.5504166666666667, 0.5495833333333333, 0.515, 0.5475, 0.5283333333333333, 0.5429166666666667, 0.5575, 0.51875, 0.53125, 0.5404166666666667, 0.5279166666666667, 0.5179166666666667, 0.5466666666666666, 0.5341666666666667, 0.545, 0.51875, 0.5295833333333333, 0.54625, 0.5291666666666667]
+    '''
