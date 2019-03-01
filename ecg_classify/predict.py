@@ -71,41 +71,44 @@ def gen_del(num):
 
 def parse_npy_data(SIGNAL_TYPE):
     print('Parsing %s...'%SIGNAL_TYPE)
-    result[SIGNAL_TYPE] = [[[-1.0,-1.0] for i in range(3)] for j in range(USERS)]
+    #result[SIGNAL_TYPE] = [[[-1.0,-1.0] for i in range(3)] for j in range(USERS)]
     data_map[SIGNAL_TYPE] = []
     del_list = []
 
     data = numpy.load(DATA_DIR+SIGNAL_TYPE)
     for i in range(data.shape[0]):
         if numpy.max(numpy.abs(data[i]))>0:
-            result[SIGNAL_TYPE][i] = [[0,0] for i in range(3)] 
+            #result[SIGNAL_TYPE][i] = [[0,0] for i in range(3)] 
             data_map[SIGNAL_TYPE].append(i)
         else:
             del_list.append(i)
 
     data = numpy.delete(data, del_list, axis=0)
 
+    '''
     for i in range(data.shape[0]): # substract each person's neutral values
         ne_mean = (data[i][0] + data[i][1]) / 2.0
         for j in range(data.shape[1]):
             data[i][j] = data[i][j] - ne_mean
     
     data = numpy.delete(data, [0,1], axis=1)
-
+    '''
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
             data[i][j][data.shape[2] - 1] = int(j / 2)
+
     
     
 
     data = data.reshape(data.shape[0]*data.shape[1], data.shape[2])
     
+    '''
     # normalization
     for i in range(data.shape[1] - 1):
         #data[:,i] = (data[:,i] - numpy.mean(data[:,i])) / numpy.std(data[:,i])
         data[:,i] = (data[:,i] - numpy.min(data[:,i])) / (numpy.max(data[:,i]) - numpy.min(data[:,i]))
-        
+    ''' 
     return data
  
 def load_features():
