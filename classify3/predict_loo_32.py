@@ -239,7 +239,7 @@ if __name__ == "__main__":
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
         repeat_time = 100
         for idx in range(repeat_time):
-            print('feature id:',feaidx,idx)
+            print('feature id 1:',feaidx,idx)
             eeg=eeg_data
             rd_ecg = numpy.random.permutation(ecg.shape[0])
             rd_gsr = numpy.random.permutation(gsr.shape[0])
@@ -269,6 +269,7 @@ if __name__ == "__main__":
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
         repeat_time = 100
         for idx in range(repeat_time):
+            print('feature id 2:',feaidx,idx)
             eeg=eeg_data
             rd_ecg = numpy.random.permutation(ecg.shape[0])
             rd_gsr = numpy.random.permutation(gsr.shape[0])

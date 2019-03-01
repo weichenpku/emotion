@@ -18,13 +18,13 @@ from sklearn.decomposition import PCA
 import scipy
 import scipy.io as sio
 
-DATA_DIR = '../features/'
+DATA_DIR = './'
 ECG_FILE = 'ecg.npy'
 GSR_FILE = 'gsr.npy'
 EEG_FILE = 'eeg2.npy'
 PUPIL_FILE = 'pupil.data'
 TYPES = 4
-USERS = 28
+USERS = 50
 
 emotion_map = {0:'neutral', 1:'joyful', 2:'sad', 3:'fearful'}
 emotion_inverse_map = {'ne':0, 'jo':1, 'sa':2, 'fe':3}
@@ -87,12 +87,6 @@ def parse_npy_data(SIGNAL_TYPE):
         #ne_mean = numpy.sqrt(data[i][0] * data[i][1])
         for j in range(data.shape[1]):
             data[i][j] = data[i][j] - ne_mean
-            if (SIGNAL_TYPE==EEG_FILE):
-                for k in range(data.shape[2]):
-                    if ne_mean[k]==0:
-                        data[i][j][k] = 1
-                    else:
-                        data[i][j][k] = data[i][j][k]/ne_mean[k]
             
     data = numpy.delete(data, [0,1], axis=1)
 
@@ -105,15 +99,14 @@ def parse_npy_data(SIGNAL_TYPE):
     
     for i in range(data.shape[2]-1):
         data[:,:,i] = (data[:,:,i]- numpy.min(data[:,:,i])) / (numpy.max(data[:,:,i]) - numpy.min(data[:,:,i]))
-    
     return data
  
 def load_features():
     print('In load_features()')
     ecg_data = parse_npy_data(ECG_FILE)
-    gsr_data = parse_npy_data(GSR_FILE)
-    eeg_data = parse_npy_data(EEG_FILE)
-    pupil_data = parse_pupil()
+    gsr_data = numpy.array([])#parse_npy_data(GSR_FILE)
+    eeg_data = numpy.array([])#parse_npy_data(EEG_FILE)
+    pupil_data = numpy.array([])#parse_pupil()
     
     return ecg_data, gsr_data, eeg_data, pupil_data
 
@@ -202,10 +195,11 @@ if __name__ == "__main__":
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
     print(ecg.shape,gsr.shape,eeg.shape,pupil.shape)
-    eeg_origin=eeg
+
+    eeg_origin=ecg
     
-    apply_pca = True
-    pca_comp_num = 128
+    apply_pca = False
+    pca_comp_num = 32
     if apply_pca:
         fea_dim = eeg_origin.shape[2]-1
         shape = eeg_origin.shape
@@ -220,49 +214,34 @@ if __name__ == "__main__":
         eeg_origin = eeg_pca
     
     feature_able = [0 for i in range(pca_comp_num)]
-    feature_del = numpy.array([  0,   1,   2,   3,   4,   5,   9,  14,  15,  19,  37,  39,  40,  41,
-            47,  52,  54,  59,  60,  62,  63,  65,  66,  67,  68,  70,  72,  73,
-            74,  78,  81,  84,  86,  87,  89,  92,  94,  96,  97,  98,  99, 101,
-           102, 105, 107, 109, 113, 114, 116, 117, 119, 120, 121, 122, 124, 125])
-    '''
-    feature_del = numpy.array([  2,   5,  12,  13,  14,  19,  26,  32,  33,  35,  36,  37,  39,  40,
-          41,  42,  43,  48,  50,  52,  54,  59,  60,  62,  63,  64,  65,  66,
-          70,  74,  78,  80,  82,  87,  91,  97, 100, 103, 107, 114, 117, 118,
-         119, 122, 123, 124, 125])
-        
-    feature_del = numpy.array([  0,   4,   9,  10,  11,  12,  18,  23,  26,  32,  33,  37,  39,  40,
-         44,  47,  49,  52,  58,  64,  66,  70,  71,  72,  73,  74,  81,  83,
-         86,  89,  96,  99, 100, 101, 103, 105, 107, 112, 113, 114, 119, 120, 125,])
-    '''
+    feature_del = numpy.array([])
+
     acc_result1=[0 for i in range(pca_comp_num)]
     acc_result2=[0 for i in range(pca_comp_num)]
     eeg_result=([[] for i in range(USERS)])
     eeg_f1_result=[0 for i in range(pca_comp_num)]
-    if (1): #for feaidx in range(pca_comp_num):
-        feaidx=1
-        tmp_del = feature_del
+    for feaidx in range(pca_comp_num):
+        
+        tmp_del = numpy.append(feature_del,feaidx)
         eeg_data1 = numpy.delete(eeg_origin, feature_del, axis=2)
-        eeg_data2 = numpy.delete(eeg_origin, [], axis=2)
+        eeg_data2 = numpy.delete(eeg_origin, tmp_del, axis=2)
         
         print('feature_dims', eeg_data1.shape, eeg_data2.shape)
-
+        
         eeg_data = eeg_data1
         eeg_result=([[] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
-        repeat_time = 10
+        repeat_time = 100
         for idx in range(repeat_time):
+            print('feature id 1:',feaidx,idx)
             eeg=eeg_data
-            rd_ecg = numpy.random.permutation(ecg.shape[0])
-            rd_gsr = numpy.random.permutation(gsr.shape[0])
             rd_eeg = numpy.random.permutation(eeg.shape[0])
-            rd_pupil = numpy.random.permutation(pupil.shape[0])
+           
 
-            ecg = ecg[rd_ecg,:]
-            gsr = gsr[rd_gsr,:]
-            eeg = eeg[rd_eeg,:]
-            pupil = pupil[rd_pupil,:]
+            eeg = ecg[rd_eeg,:]
+  
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
-            ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            ret = predict(eeg[0:216,:], eeg[216:, :], 100, 5, rd_eeg)
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
@@ -278,19 +257,17 @@ if __name__ == "__main__":
         eeg_data = eeg_data2
         eeg_result=([[] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
+        repeat_time = 100
         for idx in range(repeat_time):
+            print('feature id 2:',feaidx,idx)
             eeg=eeg_data
-            rd_ecg = numpy.random.permutation(ecg.shape[0])
-            rd_gsr = numpy.random.permutation(gsr.shape[0])
             rd_eeg = numpy.random.permutation(eeg.shape[0])
-            rd_pupil = numpy.random.permutation(pupil.shape[0])
+        
 
-            ecg = ecg[rd_ecg,:]
-            gsr = gsr[rd_gsr,:]
-            eeg = eeg[rd_eeg,:]
-            pupil = pupil[rd_pupil,:]
+            eeg = ecg[rd_eeg,:]
+
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
-            ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            ret = predict(eeg[0:216,:], eeg[216:, :], 100, 5, rd_eeg)
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
@@ -315,3 +292,7 @@ if __name__ == "__main__":
     #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
     #predict()
     exit()
+    
+    '''
+    [0.535, 0.5379166666666667, 0.5304166666666666, 0.53, 0.5295833333333333, 0.5383333333333333, 0.53375, 0.44416666666666665, 0.5345833333333333, 0.4725, 0.52625, 0.55625, 0.5329166666666667, 0.5154166666666666, 0.5504166666666667, 0.5495833333333333, 0.515, 0.5475, 0.5283333333333333, 0.5429166666666667, 0.5575, 0.51875, 0.53125, 0.5404166666666667, 0.5279166666666667, 0.5179166666666667, 0.5466666666666666, 0.5341666666666667, 0.545, 0.51875, 0.5295833333333333, 0.54625, 0.5291666666666667]
+    '''
