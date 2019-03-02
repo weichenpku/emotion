@@ -233,17 +233,17 @@ if __name__ == "__main__":
         eeg_data = eeg_data1
         eeg_result=([[] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
-        repeat_time = 100
+        repeat_time = 50
         for idx in range(repeat_time):
             print('feature id 1:',feaidx,idx)
             eeg=eeg_data
             rd_eeg = numpy.random.permutation(eeg.shape[0])
            
 
-            eeg = ecg[rd_eeg,:]
+            eeg = eeg[rd_eeg,:]
   
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
-            ret = predict(eeg[0:216,:], eeg[216:, :], 100, 5, rd_eeg)
+            ret = predict(eeg[0:216,:], eeg[216:, :], 500, 5, rd_eeg)
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
@@ -253,23 +253,22 @@ if __name__ == "__main__":
                 
             for i in range(USERS):
                 print(i,eeg_result[i])
-        acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(4*6*repeat_time)
+        acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*repeat_time)
         acc_result1[feaidx]=acc1
 
         eeg_data = eeg_data2
         eeg_result=([[] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
-        repeat_time = 100
         for idx in range(repeat_time):
             print('feature id 2:',feaidx,idx)
             eeg=eeg_data
             rd_eeg = numpy.random.permutation(eeg.shape[0])
         
 
-            eeg = ecg[rd_eeg,:]
+            eeg = eeg[rd_eeg,:]
 
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
-            ret = predict(eeg[0:216,:], eeg[216:, :], 100, 5, rd_eeg)
+            ret = predict(eeg[0:216,:], eeg[216:, :], 500, 5, rd_eeg)
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
@@ -279,7 +278,7 @@ if __name__ == "__main__":
                 
             for i in range(USERS):
                 print(i,eeg_result[i])
-        acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(4*6*repeat_time)
+        acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*repeat_time)
         acc_result2[feaidx]=acc2
 
         print('acc',acc1,acc2)
