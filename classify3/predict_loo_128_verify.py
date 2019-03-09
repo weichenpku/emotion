@@ -18,13 +18,13 @@ from sklearn.decomposition import PCA
 import scipy
 import scipy.io as sio
 
-DATA_DIR = '../features/'
+DATA_DIR = './'
 ECG_FILE = 'ecg.npy'
 GSR_FILE = 'gsr.npy'
-EEG_FILE = 'eeg2.npy'
+EEG_FILE = 'eeg_norm.npy'
 PUPIL_FILE = 'pupil.data'
 TYPES = 4
-USERS = 28
+USERS = 49
 
 emotion_map = {0:'neutral', 1:'joyful', 2:'sad', 3:'fearful'}
 emotion_inverse_map = {'ne':0, 'jo':1, 'sa':2, 'fe':3}
@@ -81,7 +81,7 @@ def parse_npy_data(SIGNAL_TYPE):
             del_list.append(i)
 
     data = numpy.delete(data, del_list, axis=0)
-
+    '''
     for i in range(data.shape[0]): # substract each person's neutral values
         ne_mean = (data[i][0] + data[i][1]) / 2.0
         #ne_mean = numpy.sqrt(data[i][0] * data[i][1])
@@ -95,25 +95,25 @@ def parse_npy_data(SIGNAL_TYPE):
                         data[i][j][k] = data[i][j][k]/ne_mean[k]
             
     data = numpy.delete(data, [0,1], axis=1)
-
+    '''
 
     data = numpy.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
             data[i][j][data.shape[2] - 1] = int(j / 2)+1
     
-    
+    '''
     for i in range(data.shape[2]-1):
         data[:,:,i] = (data[:,:,i]- numpy.min(data[:,:,i])) / (numpy.max(data[:,:,i]) - numpy.min(data[:,:,i]))
-    
+    '''
     return data
  
 def load_features():
     print('In load_features()')
-    ecg_data = parse_npy_data(ECG_FILE)
-    gsr_data = parse_npy_data(GSR_FILE)
+    ecg_data = numpy.array([]) #parse_npy_data(ECG_FILE)
+    gsr_data = numpy.array([]) #parse_npy_data(GSR_FILE)
     eeg_data = parse_npy_data(EEG_FILE)
-    pupil_data = parse_pupil()
+    pupil_data = numpy.array([]) #parse_pupil()
     
     return ecg_data, gsr_data, eeg_data, pupil_data
 
@@ -220,10 +220,11 @@ if __name__ == "__main__":
         eeg_origin = eeg_pca
     
     feature_able = [0 for i in range(pca_comp_num)]
-    feature_del = numpy.array([  0,   1,   2,   3,   4,   5,   9,  14,  15,  19,  37,  39,  40,  41,
-            47,  52,  54,  59,  60,  62,  63,  65,  66,  67,  68,  70,  72,  73,
-            74,  78,  81,  84,  86,  87,  89,  92,  94,  96,  97,  98,  99, 101,
-           102, 105, 107, 109, 113, 114, 116, 117, 119, 120, 121, 122, 124, 125])
+    feature_del = numpy.array([  0,   1,   9,  12,  13,  14,  16,  19,  21,  25,  26,  27,  28,  30,
+         33,  42,  43,  45,  46,  49,  50,  53,  56,  57,  60,  61,  66,  69,
+          71,  72,  73,  74,  75,  77,  79,  81,  82,  83,  86,  91,  92,  95,
+          98, 101, 103, 109, 111, 113, 114, 115, 116, 117, 118, 119, 121, 123,
+         126])
     '''
     feature_del = numpy.array([  2,   5,  12,  13,  14,  19,  26,  32,  33,  35,  36,  37,  39,  40,
           41,  42,  43,  48,  50,  52,  54,  59,  60,  62,  63,  64,  65,  66,
@@ -234,8 +235,11 @@ if __name__ == "__main__":
          44,  47,  49,  52,  58,  64,  66,  70,  71,  72,  73,  74,  81,  83,
          86,  89,  96,  99, 100, 101, 103, 105, 107, 112, 113, 114, 119, 120, 125,])
     '''
-    acc_result1=[0 for i in range(pca_comp_num)]
-    acc_result2=[0 for i in range(pca_comp_num)]
+    repeat_time = 200
+    acc_result1=[0 for i in range(repeat_time)]
+    acc_result2=[0 for i in range(repeat_time)]
+    std_result1=[0 for i in range(repeat_time)]
+    std_result2=[0 for i in range(repeat_time)]
     eeg_result=([[] for i in range(USERS)])
     eeg_f1_result=[0 for i in range(pca_comp_num)]
     if (1): #for feaidx in range(pca_comp_num):
@@ -249,20 +253,20 @@ if __name__ == "__main__":
         eeg_data = eeg_data1
         eeg_result=([[] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
-        repeat_time = 10
         for idx in range(repeat_time):
             eeg=eeg_data
-            rd_ecg = numpy.random.permutation(ecg.shape[0])
-            rd_gsr = numpy.random.permutation(gsr.shape[0])
+            #rd_ecg = numpy.random.permutation(ecg.shape[0])
+            #rd_gsr = numpy.random.permutation(gsr.shape[0])
             rd_eeg = numpy.random.permutation(eeg.shape[0])
-            rd_pupil = numpy.random.permutation(pupil.shape[0])
+            #rd_pupil = numpy.random.permutation(pupil.shape[0])
 
-            ecg = ecg[rd_ecg,:]
-            gsr = gsr[rd_gsr,:]
+            #ecg = ecg[rd_ecg,:]
+            #gsr = gsr[rd_gsr,:]
             eeg = eeg[rd_eeg,:]
-            pupil = pupil[rd_pupil,:]
+            #pupil = pupil[rd_pupil,:]
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
-            ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            ret = predict(eeg[0:222 ,:], eeg[222:, :], 50, 5, rd_eeg)
+            #ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
@@ -272,25 +276,27 @@ if __name__ == "__main__":
                 
             for i in range(USERS):
                 print(i,eeg_result[i])
-        acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(4*6*repeat_time)
-        acc_result1[feaidx]=acc1
+            acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*(idx+1))
+            acc_result1[idx]=acc1
+            std_result1[idx]=numpy.std(acc_result1[:idx])
 
         eeg_data = eeg_data2
         eeg_result=([[] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
         for idx in range(repeat_time):
             eeg=eeg_data
-            rd_ecg = numpy.random.permutation(ecg.shape[0])
-            rd_gsr = numpy.random.permutation(gsr.shape[0])
+            #rd_ecg = numpy.random.permutation(ecg.shape[0])
+            #rd_gsr = numpy.random.permutation(gsr.shape[0])
             rd_eeg = numpy.random.permutation(eeg.shape[0])
-            rd_pupil = numpy.random.permutation(pupil.shape[0])
+            #rd_pupil = numpy.random.permutation(pupil.shape[0])
 
-            ecg = ecg[rd_ecg,:]
-            gsr = gsr[rd_gsr,:]
+            #ecg = ecg[rd_ecg,:]
+            #gsr = gsr[rd_gsr,:]
             eeg = eeg[rd_eeg,:]
-            pupil = pupil[rd_pupil,:]
+            #pupil = pupil[rd_pupil,:]
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])            
-            ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            ret = predict(eeg[0:222 ,:], eeg[222:, :], 50, 5, rd_eeg)
+            #ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
             for i in range(len(ret)):
                 id=ret[i][0]
                 num=ret[i][1]
@@ -300,8 +306,9 @@ if __name__ == "__main__":
                 
             for i in range(USERS):
                 print(i,eeg_result[i])
-        acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(4*6*repeat_time)
-        acc_result2[feaidx]=acc2
+            acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*(idx+1))
+            acc_result2[idx]=acc2
+            std_result2[idx]=numpy.std(acc_result2[:idx])
 
         print('acc',acc1,acc2)
         if acc1+0.001<acc2:
@@ -310,6 +317,8 @@ if __name__ == "__main__":
     
     print(acc_result1)
     print(acc_result2)
+    print(std_result1)
+    print(std_result2)
     print('del_idx',feature_del)
 
     #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
