@@ -235,7 +235,7 @@ if __name__ == "__main__":
          44,  47,  49,  52,  58,  64,  66,  70,  71,  72,  73,  74,  81,  83,
          86,  89,  96,  99, 100, 101, 103, 105, 107, 112, 113, 114, 119, 120, 125,])
     '''
-    repeat_time = 200
+    repeat_time = 10
     acc_result1=[0 for i in range(repeat_time)]
     acc_result2=[0 for i in range(repeat_time)]
     std_result1=[0 for i in range(repeat_time)]

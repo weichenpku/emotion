@@ -21,7 +21,7 @@ import scipy.io as sio
 DATA_DIR = './'
 EEG_FILE = 'eeg_norm.npy'
 TYPES = 4
-USERS = 49
+USERS = 46
 
 emotion_map = {0:'neutral', 1:'joyful', 2:'sad', 3:'fearful'}
 emotion_inverse_map = {'ne':0, 'jo':1, 'sa':2, 'fe':3}
@@ -202,15 +202,20 @@ if __name__ == "__main__":
             eeg=eeg_data
             #rd_ecg = np.random.permutation(ecg.shape[0])
             #rd_gsr = np.random.permutation(gsr.shape[0])
-            rd_eeg = np.random.permutation(eeg.shape[0])
+            #rd_eeg = np.random.permutation(eeg.shape[0])
             #rd_pupil = np.random.permutation(pupil.shape[0])
+            rd_eeg = [i for i in range(eeg.shape[0])]
+            print('idx',rd_eeg)
+            rd_eeg[idx] = USERS-1
+            rd_eeg[USERS-1] = idx
+            print('idx', rd_eeg) 
 
             #ecg = ecg[rd_ecg,:]
             #gsr = gsr[rd_gsr,:]
             eeg = eeg[rd_eeg,:]
             #pupil = pupil[rd_pupil,:]
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])         
-            trainnum = 37
+            trainnum = USERS-1
             testnum = USERS-trainnum           
             ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 50, 5, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:222 ,:], eeg[222:, :], 50, 5, rd_eeg)
@@ -233,63 +238,10 @@ if __name__ == "__main__":
         np.save('classify_result.npy',eeg_classify_result1)
         np.save('eeg_result.npy',eeg_result1)
 
-
-
-
-        exit()
-
-        eeg_data = eeg_data2
-        eeg_result=([[[0 for k in range(3)] for j in range(3)] for i in range(USERS)])
-        eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
-        for idx in range(repeat_time):
-            eeg=eeg_data
-            #rd_ecg = np.random.permutation(ecg.shape[0])
-            #rd_gsr = np.random.permutation(gsr.shape[0])
-            rd_eeg = np.random.permutation(eeg.shape[0])
-            #rd_pupil = np.random.permutation(pupil.shape[0])
-
-            #ecg = ecg[rd_ecg,:]
-            #gsr = gsr[rd_gsr,:]
-            eeg = eeg[rd_eeg,:]
-            #pupil = pupil[rd_pupil,:]
-            eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]]) 
-            trainnum = 37
-            testnum = USERS-trainnum           
-            ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 50, 5, rd_eeg[trainnum:])
-            #ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
-            for i in range(len(ret)):
-                userid=ret[i][0]
-                num1=ret[i][1]
-                num2=ret[i][2]
-                #print(eeg_result[id])
-                #print(num)
-                eeg_result[userid][num1][num2] = eeg_result[userid][num1][num2]+1
-                
-            for i in range(USERS):
-                print(i,eeg_result[i])
-            acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*(idx+1))
-            acc_result2[idx]=acc2
-            std_result2[idx]=np.std(acc_result2[:idx])
-        eeg_result2=eeg_result
-        eeg_classify_result2=eeg_classify_result
-
-        print('acc',acc1,acc2)
-        if acc1+0.001<acc2:
-            feature_del = tmp_del
         print(eeg_classify_result1)
-        print(eeg_classify_result2)
         print(eeg_result1)
-        print(eeg_result2)
-
-        
 
     
-    
-    print(acc_result1)
-    print(acc_result2)
-    print(std_result1)
-    print(std_result2)
-    print('del_idx',feature_del)
 
     #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
     #predict()
