@@ -189,7 +189,7 @@ if __name__ == "__main__":
     std_result2=[0 for i in range(repeat_time)]
     if (1): #for feaidx in range(pca_comp_num):
         feaidx=1
-        tmp_del = feature_del
+        tmp_del = numpy.append(feature_del,feaidx)
         eeg_data1 = np.delete(eeg_origin, feature_del, axis=2)
         eeg_data2 = np.delete(eeg_origin, [], axis=2)
         

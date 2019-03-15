@@ -32,22 +32,29 @@ female_idx = [1, 2, 3, 5, 7, 8, 14, 15, 21, 23, 24, 26, 29, 32, 33, 34, 35, 37, 
 male_idx = [0, 4, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 27, 28, 30, 31, 36, 38, 40, 43]
 female_num = 23
 male_num = 23
+black_idx = [0, 5, 13, 16, 25]
+white_num = 46-len(black_idx)
 
 data_map = {} # channel: index => user
 
 eeg_f1_result = []
 eeg_classify_result = []
 
-repeat_time = 100
+flag_no_male = False # True
+flag_no_female = False #True
+flag_black = True
+flag_use_loo = False
+user_del_list = []
+
+repeat_time = 2
 
 def parse_npy_data(SIGNAL_TYPE):
     print('Parsing %s...'%SIGNAL_TYPE)
     data_map[SIGNAL_TYPE] = []
-    del_list = []
 
     data = np.load(DATA_DIR+SIGNAL_TYPE)
-    data = np.delete(data, del_list, axis=0)
-    
+    data = np.delete(data, user_del_list, axis=0)
+    print(data.shape)
 
     data = np.insert(data, data.shape[2], int(0), axis=2) # add labels
     for i in range(data.shape[0]):
@@ -77,8 +84,8 @@ def predict(train, test, epoch_num, batch_num, user):
     dims = train.shape
     X = train[:,0:dims[1] - 1].astype(float)
     Y = train[:,dims[1] - 1]
-    print (X.shape)
-    print (Y.shape)
+    #print (X.shape)
+    #print (Y.shape)
     
     # encode class values as integers
     encoder = LabelEncoder()
@@ -97,14 +104,14 @@ def predict(train, test, epoch_num, batch_num, user):
     # Compile model
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     
-    model.fit(X, dummy_y, epochs=epoch_num, batch_size=batch_num)
+    model.fit(X, dummy_y, epochs=epoch_num, batch_size=batch_num, verbose=0)
     
     #test
     dim_test = test.shape
     X1 = test[:,0:dim_test[1] - 1].astype(float)
     Y1 = test[:,dim_test[1] - 1]
-    print(X1.shape)
-    print(Y1.shape)
+    #print(X1.shape)
+    #print(Y1.shape)
     
     result = model.predict_classes(X1)
     result_p = model.predict(X1)
@@ -120,7 +127,7 @@ def predict(train, test, epoch_num, batch_num, user):
         user_valid[i]=[user[int(i/6)],int(Y1[i]-1),int(result[i])]
     
     print("Correct Results: %d/%d"%(correct, len(X1)))
-    print(user_valid)
+    #print(user_valid)
 
     backend.clear_session()
     return user_valid
@@ -155,6 +162,17 @@ def LDA_predict(xtrain,ytrain,xtest,ytest):
     '''
 
 if __name__ == "__main__":
+
+    if (flag_no_female):
+        user_del_list = female_idx
+        USERS = male_num
+    if (flag_no_male):
+        user_del_list = male_idx
+        USERS = female_num
+    if (flag_black):
+        user_del_list = black_idx
+        USERS = white_num
+
     #parse_pupil()
     ecg, gsr, eeg, pupil = load_features()
     print(ecg.shape,gsr.shape,eeg.shape,pupil.shape)
@@ -176,48 +194,52 @@ if __name__ == "__main__":
         eeg_origin = eeg_pca
     
     feature_able = [0 for i in range(pca_comp_num)]
-    feature_del = np.array([  0,   1,   9,  12,  13,  14,  16,  19,  21,  25,  26,  27,  28,  30,
+    if flag_use_loo:
+        feature_del = np.array([  0,   1,   9,  12,  13,  14,  16,  19,  21,  25,  26,  27,  28,  30,
          33,  42,  43,  45,  46,  49,  50,  53,  56,  57,  60,  61,  66,  69,
           71,  72,  73,  74,  75,  77,  79,  81,  82,  83,  86,  91,  92,  95,
           98, 101, 103, 109, 111, 113, 114, 115, 116, 117, 118, 119, 121, 123,
          126])
-   
+    else:
+        feature_del = []
     
-    acc_result1=[0 for i in range(repeat_time)]
-    acc_result2=[0 for i in range(repeat_time)]
-    std_result1=[0 for i in range(repeat_time)]
-    std_result2=[0 for i in range(repeat_time)]
-    if (1): #for feaidx in range(pca_comp_num):
-        feaidx=1
-        tmp_del = feature_del
+    acc_result1=[0 for i in range(repeat_time*USERS)]
+    acc_result2=[0 for i in range(repeat_time*USERS)]
+    std_result1=[0 for i in range(repeat_time*USERS)]
+    std_result2=[0 for i in range(repeat_time*USERS)]
+    for feaidx in range(pca_comp_num):
+        tmp_del = np.append(feature_del,feaidx)
         eeg_data1 = np.delete(eeg_origin, feature_del, axis=2)
-        eeg_data2 = np.delete(eeg_origin, [], axis=2)
-        
-        print('feature_dims', eeg_data1.shape, eeg_data2.shape)
+        eeg_data2 = np.delete(eeg_origin, tmp_del, axis=2)
+
 
         eeg_data = eeg_data1
         eeg_result=([[[0 for k in range(3)] for j in range(3)] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
-        for idx in range(repeat_time):
+        for idx in range(repeat_time*USERS):
+            print('feature id',feaidx)
             eeg=eeg_data
             #rd_ecg = np.random.permutation(ecg.shape[0])
             #rd_gsr = np.random.permutation(gsr.shape[0])
             #rd_eeg = np.random.permutation(eeg.shape[0])
             #rd_pupil = np.random.permutation(pupil.shape[0])
             rd_eeg = [i for i in range(eeg.shape[0])]
-            print('idx',rd_eeg)
-            rd_eeg[idx] = USERS-1
-            rd_eeg[USERS-1] = idx
-            print('idx', rd_eeg) 
+            #print('idx',rd_eeg)
+            modidx = idx % USERS
+            rd_eeg[modidx] = USERS-1
+            rd_eeg[USERS-1] = modidx
+            #print('idx', rd_eeg) 
 
             #ecg = ecg[rd_ecg,:]
             #gsr = gsr[rd_gsr,:]
             eeg = eeg[rd_eeg,:]
             #pupil = pupil[rd_pupil,:]
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])         
-            trainnum = USERS-1
-            testnum = USERS-trainnum           
-            ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 50, 5, rd_eeg[trainnum:])   
+            #testnum = int(USERS*0.1)
+            #trainnum = USERS - testnum   
+            trainnum = USERS - 1
+            testnum = 1
+            ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 25, 5, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:222 ,:], eeg[222:, :], 50, 5, rd_eeg)
             #ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
             for i in range(len(ret)):
@@ -228,21 +250,85 @@ if __name__ == "__main__":
                 #print(num)
                 eeg_result[userid][num1][num2] = eeg_result[userid][num1][num2]+1
                 
+            '''
             for i in range(USERS):
-                print(i,eeg_result[i])
-            acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*(idx+1))
+                print(i,eeg_result[i])'''
+            acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(6*(idx+1))
             acc_result1[idx]=acc1
             std_result1[idx]=np.std(acc_result1[:idx])
+            print('right_num',eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])
+            print('total_num',6*(idx+1))
+            print('acc',acc1)
+
         eeg_result1=eeg_result
         eeg_classify_result1=eeg_classify_result
-        np.save('classify_result.npy',eeg_classify_result1)
-        np.save('eeg_result.npy',eeg_result1)
+        
+        eeg_data = eeg_data2
+        eeg_result=([[[0 for k in range(3)] for j in range(3)] for i in range(USERS)])
+        eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
+        for idx in range(repeat_time*USERS):
+            print('feature id',feaidx)
+            eeg=eeg_data
+            #rd_ecg = np.random.permutation(ecg.shape[0])
+            #rd_gsr = np.random.permutation(gsr.shape[0])
+            #rd_eeg = np.random.permutation(eeg.shape[0])
+            #rd_pupil = np.random.permutation(pupil.shape[0])
+            rd_eeg = [i for i in range(eeg.shape[0])]
+            #print('idx',rd_eeg)
+            modidx = idx % USERS
+            rd_eeg[modidx] = USERS-1
+            rd_eeg[USERS-1] = modidx
+            #print('idx', rd_eeg) 
 
-        print(eeg_classify_result1)
-        print(eeg_result1)
+            #ecg = ecg[rd_ecg,:]
+            #gsr = gsr[rd_gsr,:]
+            eeg = eeg[rd_eeg,:]
+            #pupil = pupil[rd_pupil,:]
+            eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])         
+            #testnum = int(USERS*0.1)
+            #trainnum = USERS - testnum   
+            trainnum = USERS - 1
+            testnum = 1
+            ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 25, 5, rd_eeg[trainnum:])   
+            #ret = predict(eeg[0:222 ,:], eeg[222:, :], 50, 5, rd_eeg)
+            #ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
+            for i in range(len(ret)):
+                userid=ret[i][0]
+                num1=ret[i][1]
+                num2=ret[i][2]
+                #print(eeg_result[id])
+                #print(num)
+                eeg_result[userid][num1][num2] = eeg_result[userid][num1][num2]+1
 
-    
+            '''    
+            for i in range(USERS):
+                print(i,eeg_result[i])'''
+            acc2 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(6*(idx+1))
+            acc_result2[idx]=acc2
+            std_result2[idx]=np.std(acc_result2[:idx])
+            print('right_num',eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])
+            print('total_num',6*(idx+1))
+            print('acc',acc2)
+        
+        
+        eeg_result2=eeg_result
+        eeg_classify_result2=eeg_classify_result
 
-    #predict(pupil[0:100,:], pupil[100:, :], 500, 5)
-    #predict()
+        print('acc1')
+        print(acc_result1)
+        print('acc2')
+        print(acc_result2)
+
+        if acc1+0.001<acc2:
+            feature_del = tmp_del
+
+    np.save('classify_result.npy',eeg_classify_result1)
+    np.save('eeg_result.npy',eeg_result1)
+
+    print(eeg_classify_result1)
+    print(eeg_result1)
+
+    print('del_idx',feature_del)
+
+        
     exit()
