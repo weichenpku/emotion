@@ -19,7 +19,7 @@ import scipy
 import scipy.io as sio
 
 DATA_DIR = './'
-EEG_FILE = 'eeg_norm.npy'
+EEG_FILE = 'eeg_norm2.npy'
 TYPES = 4
 USERS = 46
 
@@ -32,7 +32,8 @@ female_idx = [1, 2, 3, 5, 7, 8, 14, 15, 21, 23, 24, 26, 29, 32, 33, 34, 35, 37, 
 male_idx = [0, 4, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 27, 28, 30, 31, 36, 38, 40, 43]
 female_num = 23
 male_num = 23
-black_idx = [0, 5, 13, 16, 25]
+#black_idx = [0, 5, 13, 16, 25]
+black_idx = [13,16,25,36]  #[5,6,13,16,25,29,36]  #
 white_num = 46-len(black_idx)
 
 data_map = {} # channel: index => user
@@ -104,7 +105,7 @@ def predict(train, test, epoch_num, batch_num, user):
     # Compile model
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     
-    model.fit(X, dummy_y, epochs=epoch_num, batch_size=batch_num)
+    model.fit(X, dummy_y, epochs=epoch_num, batch_size=batch_num, verbose=0)
     
     #test
     dim_test = test.shape
@@ -127,7 +128,7 @@ def predict(train, test, epoch_num, batch_num, user):
         user_valid[i]=[user[int(i/6)],int(Y1[i]-1),int(result[i])]
     
     print("Correct Results: %d/%d"%(correct, len(X1)))
-    print(user_valid)
+    #print(user_valid)
 
     backend.clear_session()
     return user_valid
@@ -225,11 +226,11 @@ if __name__ == "__main__":
             #rd_eeg = np.random.permutation(eeg.shape[0])
             #rd_pupil = np.random.permutation(pupil.shape[0])
             rd_eeg = [i for i in range(eeg.shape[0])]
-            print('idx',rd_eeg)
+            #print('idx',rd_eeg)
             modidx = idx % USERS
             rd_eeg[modidx] = USERS-1
             rd_eeg[USERS-1] = modidx
-            print('idx', rd_eeg) 
+            #print('idx', rd_eeg) 
 
             #ecg = ecg[rd_ecg,:]
             #gsr = gsr[rd_gsr,:]
@@ -251,11 +252,15 @@ if __name__ == "__main__":
                 #print(num)
                 eeg_result[userid][num1][num2] = eeg_result[userid][num1][num2]+1
                 
-            for i in range(USERS):
-                print(i,eeg_result[i])
-            acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(9*6*(idx+1))
+            #for i in range(USERS):
+            #    print(i,eeg_result[i])
+            acc1 = (eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])/(6*(idx+1))
             acc_result1[idx]=acc1
             std_result1[idx]=np.std(acc_result1[:idx])
+            print('right_num',eeg_classify_result[0][0] + eeg_classify_result[1][1] + eeg_classify_result[2][2])
+            print('total_num',6*(idx+1))
+            print('acc',acc1)
+
         eeg_result1=eeg_result
         eeg_classify_result1=eeg_classify_result
         np.save('classify_result.npy',eeg_classify_result1)
@@ -266,3 +271,18 @@ if __name__ == "__main__":
 
         
     exit()
+
+
+    '''
+    [13, 16, 25, 36]  0-41
+    0.6571428571428571
+    0.6547619047619049
+
+    [5,6,13,16,25,36] 0-39
+    0.6537499999999999
+
+    [5,6,13,16,25,29,36] 0-38
+    0.6628205128205129
+    0.6679487179487179
+
+    '''

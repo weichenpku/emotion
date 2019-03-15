@@ -19,7 +19,7 @@ import scipy
 import scipy.io as sio
 
 DATA_DIR = './'
-EEG_FILE = 'eeg_norm.npy'
+EEG_FILE = 'eeg_norm2.npy'
 TYPES = 4
 USERS = 46
 
@@ -32,7 +32,7 @@ female_idx = [1, 2, 3, 5, 7, 8, 14, 15, 21, 23, 24, 26, 29, 32, 33, 34, 35, 37, 
 male_idx = [0, 4, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 27, 28, 30, 31, 36, 38, 40, 43]
 female_num = 23
 male_num = 23
-black_idx = [0, 5, 13, 16, 25]
+black_idx = [5,6,13,16,25,29,36]  #[13,16,25,36]  #
 white_num = 46-len(black_idx)
 
 data_map = {} # channel: index => user
@@ -42,11 +42,11 @@ eeg_classify_result = []
 
 flag_no_male = False # True
 flag_no_female = False #True
-flag_black = True
+flag_black = True #False
 flag_use_loo = False
 user_del_list = []
 
-repeat_time = 2
+repeat_time = 3
 
 def parse_npy_data(SIGNAL_TYPE):
     print('Parsing %s...'%SIGNAL_TYPE)
@@ -216,8 +216,9 @@ if __name__ == "__main__":
         eeg_data = eeg_data1
         eeg_result=([[[0 for k in range(3)] for j in range(3)] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
+        print('before_del',feature_del)
         for idx in range(repeat_time*USERS):
-            print('feature id',feaidx)
+            print('feature id',feaidx,'repeat_time',idx/USERS)
             eeg=eeg_data
             #rd_ecg = np.random.permutation(ecg.shape[0])
             #rd_gsr = np.random.permutation(gsr.shape[0])
@@ -266,8 +267,9 @@ if __name__ == "__main__":
         eeg_data = eeg_data2
         eeg_result=([[[0 for k in range(3)] for j in range(3)] for i in range(USERS)])
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
+        print('after_del',tmp_del)
         for idx in range(repeat_time*USERS):
-            print('feature id',feaidx)
+            print('feature id',feaidx,'repeat_time',idx/USERS)
             eeg=eeg_data
             #rd_ecg = np.random.permutation(ecg.shape[0])
             #rd_gsr = np.random.permutation(gsr.shape[0])
@@ -319,7 +321,7 @@ if __name__ == "__main__":
         print('acc2')
         print(acc_result2)
 
-        if acc1+0.001<acc2:
+        if acc1+0.005<acc2:
             feature_del = tmp_del
 
     np.save('classify_result.npy',eeg_classify_result1)

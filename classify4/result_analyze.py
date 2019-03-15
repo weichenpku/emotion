@@ -24,17 +24,17 @@ print(eeg_result)
 usernum = eeg_result.shape[0]
 accuracy_single = [0 for i in range(usernum)]
 num=0
-acc70=0
 
 precise_single=np.array([np.array([0.0 for i in range(3)]) for j in range(usernum)])
 recall_single=np.array([np.array([0.0 for i in range(3)]) for j in range(usernum)])
 f1_single=np.array([np.array([0.0 for i in range(3)]) for j in range(usernum)])
 for i in range(usernum):
     accuracy_single[i] = (eeg_result[i][0][0]+eeg_result[i][1][1]+eeg_result[i][2][2])*1.0/np.sum(np.sum(eeg_result[i]))
-    print(accuracy_single[i])
+    print(i,accuracy_single[i])
     if (accuracy_single[i]<0.4):
         num=num+1
-        acc70+=accuracy_single[i]
+        print(num, i, accuracy_single[i])
+
     for j in range(3):
         tp = eeg_result[i][j][j]
         fp = np.sum(eeg_result[i][:,j]) - eeg_result[i][j][j]
@@ -52,8 +52,5 @@ for i in range(usernum):
 
 print(f1_single)
 print(np.mean(accuracy_single))
-'''
-print(num)
-print(acc70/num)
-'''
+
  
