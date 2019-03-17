@@ -19,7 +19,7 @@ from sklearn.ensemble import AdaBoostClassifier
 import scipy
 import scipy.io as sio
 
-DATA_DIR = './'
+DATA_DIR = 'data/'
 EEG_FILE = 'eeg_norm.npy'
 TYPES = 4
 USERS = 46
@@ -235,10 +235,6 @@ if __name__ == "__main__":
         eeg_classify_result = [[0 for i in range(3)] for j in range(3)]
         for idx in range(repeat_time*USERS):
             eeg=eeg_data
-            #rd_ecg = np.random.permutation(ecg.shape[0])
-            #rd_gsr = np.random.permutation(gsr.shape[0])
-            #rd_eeg = np.random.permutation(eeg.shape[0])
-            #rd_pupil = np.random.permutation(pupil.shape[0])
             rd_eeg = [i for i in range(eeg.shape[0])]
             #print('idx',rd_eeg)
             modidx = idx % USERS
@@ -246,10 +242,7 @@ if __name__ == "__main__":
             rd_eeg[USERS-1] = modidx
             #print('idx', rd_eeg) 
 
-            #ecg = ecg[rd_ecg,:]
-            #gsr = gsr[rd_gsr,:]
             eeg = eeg[rd_eeg,:]
-            #pupil = pupil[rd_pupil,:]
             eeg=eeg.reshape([eeg.shape[0]*eeg.shape[1], eeg.shape[2]])         
             #testnum = int(USERS*0.1)
             #trainnum = USERS - testnum   
