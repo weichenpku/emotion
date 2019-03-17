@@ -32,7 +32,7 @@ female_idx = [1, 2, 3, 5, 7, 8, 14, 15, 21, 23, 24, 26, 29, 32, 33, 34, 35, 37, 
 male_idx = [0, 4, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 27, 28, 30, 31, 36, 38, 40, 43]
 female_num = 23
 male_num = 23
-black_idx = [5,6,13,16,25,29,36]  #[13,16,25,36]  #
+black_idx = [5,6,13,16,25]  #[5,6,13,16,25,29,36]  #
 white_num = 46-len(black_idx)
 
 data_map = {} # channel: index => user
@@ -291,7 +291,7 @@ if __name__ == "__main__":
             #trainnum = USERS - testnum   
             trainnum = USERS - 1
             testnum = 1
-            ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 25, 5, rd_eeg[trainnum:])   
+            ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 75, USERS-1, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:222 ,:], eeg[222:, :], 50, 5, rd_eeg)
             #ret = predict(eeg[0:126,:], eeg[126:, :], 100, 5, rd_eeg)
             for i in range(len(ret)):
