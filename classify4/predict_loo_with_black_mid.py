@@ -20,7 +20,7 @@ import scipy
 import scipy.io as sio
 
 DATA_DIR = './'
-EEG_FILE = 'eeg_norm2.npy'
+EEG_FILE = 'eeg_mid.npy'
 TYPES = 4
 USERS = 46
 
@@ -34,7 +34,7 @@ male_idx = [0, 4, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 27, 28, 30, 
 female_num = 23
 male_num = 23
 #black_idx = [0, 5, 13, 16, 25]
-black_idx = []#[13]#[5,6,13,16,25]  #[13] #[5,6,13,16,25,29,36]  #
+black_idx = [6,13,25,29,36]#[5,6,13,16,25]  #[13] #[5,6,13,16,25,29,36]  #
 white_num = 46-len(black_idx)
 
 data_map = {} # channel: index => user
@@ -44,8 +44,8 @@ eeg_classify_result = []
 
 flag_no_male = False # True
 flag_no_female = False #True
-flag_black = False# True #
-flag_use_loo = False#True#
+flag_black =True # False# 
+flag_use_loo = True#False#
 user_del_list = []
 
 repeat_time = 10
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     eeg_origin=eeg
     
     apply_pca = True #False
-    pca_comp_num = 128
+    pca_comp_num = 64
     if apply_pca:
         fea_dim = eeg_origin.shape[2]-1
         shape = eeg_origin.shape
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     
     feature_able = [0 for i in range(pca_comp_num)]
     if flag_use_loo:
-        feature_del = np.array([0,2])
+        feature_del = np.array([0])
         '''
         feature_del = np.array([  0,   1,   9,  12,  13,  14,  16,  19,  21,  25,  26,  27,  28,  30,
          33,  42,  43,  45,  46,  49,  50,  53,  56,  57,  60,  61,  66,  69,
@@ -258,7 +258,7 @@ if __name__ == "__main__":
             trainnum = USERS - 1
             testnum = 1
             experiment = 6
-            ret = predict(eeg[0:trainnum*experiment ,:], eeg[trainnum*experiment:, :], 75, USERS-1, rd_eeg[trainnum:])   
+            ret = predict(eeg[0:trainnum*experiment ,:], eeg[trainnum*experiment:, :], 150, USERS-1, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 50, USERS-1, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 25, 5, rd_eeg[trainnum:])   
             
