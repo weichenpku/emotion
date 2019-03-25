@@ -34,7 +34,7 @@ male_idx = [0, 4, 6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 22, 25, 27, 28, 30, 
 female_num = 23
 male_num = 23
 #black_idx = [0, 5, 13, 16, 25]
-black_idx = []# [13] #[5,6,13,16,25]  #[5,6,13,16,25,29,36]  #
+black_idx = [5,8,13] #[5,6,13,16,25]  #[5,6,13,16,25,29,36]  #
 white_num = 46-len(black_idx)
 
 data_map = {} # channel: index => user
@@ -44,7 +44,7 @@ eeg_classify_result = []
 
 flag_no_male = False # True
 flag_no_female = False #True
-flag_black = True #False
+flag_black = True #False#
 flag_use_loo = False#True#
 user_del_list = []
 
@@ -59,11 +59,12 @@ def parse_npy_data(SIGNAL_TYPE):
     print(data.shape)
 
     data = np.insert(data, data.shape[2], int(0), axis=2) # add labels
-    data = np.delete(data, [0,1], axis=1)
+    #data = np.delete(data, [0,1], axis=1)
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
             data[i][j][data.shape[2] - 1] = int(j / 2)+1
-            
+            if data[i][j][data.shape[2] - 1] == 3:
+                data[i][j][data.shape[2] - 1] = 2       
             
     '''
     for i in range(data.shape[2]-1):
@@ -255,7 +256,7 @@ if __name__ == "__main__":
             #trainnum = USERS - testnum   
             trainnum = USERS - 1
             testnum = 1
-            experiment = 4
+            experiment = 6
             ret = predict(eeg[0:trainnum*experiment ,:], eeg[trainnum*experiment:, :], 75, USERS-1, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 50, USERS-1, rd_eeg[trainnum:])   
             #ret = predict(eeg[0:trainnum*6 ,:], eeg[trainnum*6:, :], 25, 5, rd_eeg[trainnum:])   
